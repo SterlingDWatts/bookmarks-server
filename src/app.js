@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const cors = require("cors");
 const winston = require("winston");
+const uuid = require("uuid/v4");
 const { NODE_ENV } = require("./config");
 
 // create Express app
@@ -56,23 +57,116 @@ const bodyParser = express.json();
 // /bookmarks endpoint
 const bookmarksRouter = express.Router();
 
+const bookmarks = [
+  {
+    id: 1,
+    title: "Google",
+    url: "https://www.google.com",
+    description: "Search the web",
+    rating: 5
+  }
+];
+
 bookmarksRouter
   .route("/bookmarks")
   .get((req, res) => {
-    // TODO implement code
+    res.json(bookmarks);
   })
   .post(bodyParser, (req, res) => {
-    // TODO implement code
+    const { title, url, description = "", rating } = req.body;
+    console.log(req);
+
+    if (!title) {
+      logger.error(`Title is required`);
+      return res.status(400).send("Invalid data");
+    }
+
+    if (!url) {
+      logger.error(`Url is required`);
+      return res.status(400).send("Invalid data");
+    }
+
+    const urlRegExp = new RegExp(
+      "^(https?:\\/\\/)?" + // protocol
+      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|" + // domain name
+      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+        "(\\#[-a-z\\d_]*)?$",
+      "i" // fragment locator
+    );
+
+    if (!url.match(urlRegExp)) {
+      logger.error(`Url must be a valid URL`);
+      return res.status(400).send("Invalid data");
+    }
+
+    if (!rating) {
+      logger.error(`Rating is required`);
+      return res.status(400).send("Invalid data");
+    }
+
+    if (!parseInt(rating)) {
+      logger.error(`Rating must be a number`);
+      return res.status(400).send("Invalid data");
+    }
+
+    if (rating < 1 || rating > 5) {
+      logger.error(`Rating must be between 1 and 5`);
+      return res.status(400).send("Invalid data");
+    }
+
+    const id = uuid();
+
+    const bookmark = {
+      id,
+      title,
+      url,
+      description,
+      rating
+    };
+
+    bookmarks.push(bookmark);
+
+    logger.info(`Bookmark with id ${id} created`);
+
+    res
+      .status(201)
+      .location(`https://localhost:8000/bookmarks/${id}`)
+      .json(bookmark);
   });
 
 bookmarksRouter
   .route("/bookmarks/:id")
   .get((req, res) => {
-    // TODO implement code here
+    const { id } = req.params;
+    const bookmark = bookmarks.find(b => b.id == id);
+
+    if (!bookmark) {
+      logger.error(`Bookmark with id ${id} not found`);
+      return res.status(404).send("Bookmark Not Found");
+    }
+
+    res.json(bookmark);
   })
   .delete((req, res) => {
-    // TODO implement code here
+    const { id } = req.params;
+
+    const bookmarkIndex = bookmarks.findIndex(b => b.id == id);
+
+    if (bookmarkIndex === -1) {
+      logger.error(`Bookmark with id ${id} not found`);
+      return res.status(404).send("Not found");
+    }
+
+    bookmarks.splice(bookmarkIndex, 1);
+
+    logger.info(`Bookmark with id ${id} deleted`);
+
+    res.status(204).end();
   });
+
+app.use(bookmarksRouter);
 
 // error handling middleware gives short response if in production
 app.use(function errorHandler(error, req, res, next) {
