@@ -74,7 +74,6 @@ bookmarksRouter
   })
   .post(bodyParser, (req, res) => {
     const { title, url, description = "", rating } = req.body;
-    console.log(req);
 
     if (!title) {
       logger.error(`Title is required`);
