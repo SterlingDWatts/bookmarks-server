@@ -53,5 +53,14 @@ describe("Bookmarks Endpoints", function() {
         .set("Authorization", `Bearer ${process.env.API_TOKEN}`)
         .expect(200, testBookmarks);
     });
+
+    it("GET /bookmarks:id responds with 200 and the specified bookmark", () => {
+      const bookmarkId = 2;
+      const expectedBookmark = testBookmarks[bookmarkId - 1];
+      return supertest(app)
+        .get(`/bookmarks/${bookmarkId}`)
+        .set("Authorization", `Bearer ${process.env.API_TOKEN}`)
+        .expect(200, expectedBookmark);
+    });
   });
 });
