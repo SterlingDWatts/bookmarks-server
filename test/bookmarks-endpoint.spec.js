@@ -1,4 +1,5 @@
 const knex = require("knex");
+const fixtures = require("./bookmarks-fixtures");
 const app = require("../src/app");
 
 describe("Bookmarks Endpoints", function() {
@@ -18,49 +19,49 @@ describe("Bookmarks Endpoints", function() {
 
   afterEach("clean the table", () => db("bookmarks").truncate());
 
-  context("Given there are bookmarks in the database", () => {
-    const testBookmarks = [
-      {
-        id: 1,
-        title: "65 Questions",
-        url: "https://www.algoexpert.io/",
-        rating: 5,
-        description: "Algorithm Practice"
-      },
-      {
-        id: 2,
-        title: "Github",
-        url: "https://github.com/",
-        rating: 5,
-        description: "Version Control"
-      },
-      {
-        id: 3,
-        title: "WesBos",
-        url: "https://wesbos.com/",
-        rating: 4,
-        description: "Learn to Code"
-      }
-    ];
+  describe(`Unauthorized requests`, () => {
+    const testBookmarks = fixtures.makeBookmarksArray();
 
     beforeEach("insert bookmarks", () => {
       return db.into("bookmarks").insert(testBookmarks);
     });
 
-    it("GET /bookmarks responds with 200 and all of the bookmarks", () => {
+    it("responds with 401 Unauthorized for GET /bookmarks", () => {
       return supertest(app)
         .get("/bookmarks")
-        .set("Authorization", `Bearer ${process.env.API_TOKEN}`)
-        .expect(200, testBookmarks);
+        .expect(401, { error: "Unauthorized request" });
     });
 
-    it("GET /bookmarks:id responds with 200 and the specified bookmark", () => {
-      const bookmarkId = 2;
-      const expectedBookmark = testBookmarks[bookmarkId - 1];
+    it("responds with 401 Unauthorized for POST /bookmarks", () => {
       return supertest(app)
-        .get(`/bookmarks/${bookmarkId}`)
-        .set("Authorization", `Bearer ${process.env.API_TOKEN}`)
-        .expect(200, expectedBookmark);
+        .post("/bookmarks")
+        .send({ title: "test-title", url: "http://some.thing.com", rating: 1 })
+        .expect(401, { error: "Unauthorized request" });
+    });
+
+    it("responds with 401 Unauthorized for GET /bookmarks/:id", () => {
+      const secondBookmark = testBookmarks[1];
+      return supertest(app)
+        .get(`/bookmarks/${secondBookmark.id}`)
+        .expect(401, { error: "Unauthorized request" });
+    });
+
+    it("responds with 401 Unauthorized for DELETE /bookmarks/:id", () => {
+      const aBookmark = testBookmarks[1];
+      return supertest(app)
+        .delete(`/bookmarks/${aBookmark.id}`)
+        .expect(401, { error: "Unauthorized request" });
+    });
+  });
+
+  describe(`GET /bookmarks`, () => {
+    context("Given no bookmarks", () => {
+      it("responds with 200 and an empty list", () => {
+        return supertest(app)
+          .get("/bookmarks")
+          .set("Authorization", `Bearer ${process.env.API_TOKEN}`)
+          .expect(200, []);
+      });
     });
   });
 });
