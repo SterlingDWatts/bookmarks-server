@@ -25,7 +25,7 @@ app.use(cors());
 // authentication middleware
 app.use(validateBearerToken);
 
-// /bookmarks endpoint
+// /api/bookmarks endpoint
 app.use(bookmarksRouter);
 
 // basic endpoint for app.js
